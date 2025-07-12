@@ -23,6 +23,11 @@ go.work.sum
 # Go modules download cache
 go.sum
 
+# Go package cache and dependencies
+pkg/
+pkg/mod/
+pkg/sumdb/
+
 # Environment variables
 .env
 .env.local
