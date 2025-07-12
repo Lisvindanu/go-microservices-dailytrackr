@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	//"net/http"
 
 	"dailytrackr/activity-service/handlers"
 	"dailytrackr/activity-service/routes"
@@ -12,9 +11,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/joho/godotenv" // <-- 1. IMPORT
 )
 
 func main() {
+	// 2. TAMBAHKAN BARIS INI UNTUK MEMUAT .env DARI FOLDER YANG SAMA
+	// Ini akan memastikan kredensial Cloudinary terbaca.
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found, using system environment variables")
+	}
+
 	// Load configuration
 	cfg := config.LoadConfig()
 

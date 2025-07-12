@@ -413,8 +413,8 @@ func (h *ActivityHandlers) UploadPhoto(c *fiber.Ctx) error {
 		})
 	}
 
-	// Upload photo using simple method (without Cloudinary for now)
-	photoURL, err := h.photoService.UploadPhotoSimple(file)
+	// PERBAIKAN: Panggil fungsi UploadPhoto yang benar, bukan UploadPhotoSimple
+	photoURL, err := h.photoService.UploadPhoto(file)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,

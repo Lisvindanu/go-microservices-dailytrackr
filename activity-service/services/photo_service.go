@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
@@ -11,7 +12,7 @@ import (
 	"dailytrackr/shared/config"
 	"dailytrackr/shared/constants"
 
-	"github.com/cloudinary/cloudinary-go/v2"
+	"github.com/cloudinary/cloudinary-go/v2" // <-- PERBAIKAN: Menghapus "com" yang berlebih
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 )
 
@@ -20,17 +21,29 @@ type PhotoService struct {
 	config     *config.Config
 }
 
-// NewPhotoService creates a new photo service instance
+// NewPhotoService creates a new photo service instance.
+// It will now log a fatal error if Cloudinary credentials are not properly configured.
 func NewPhotoService(cfg *config.Config) *PhotoService {
-	// Initialize Cloudinary only if credentials are provided
-	var cld *cloudinary.Cloudinary
-	if cfg.CloudinaryCloudName != "" && cfg.CloudinaryAPIKey != "" && cfg.CloudinaryAPISecret != "" {
-		cld, _ = cloudinary.NewFromParams(
-			cfg.CloudinaryCloudName,
-			cfg.CloudinaryAPIKey,
-			cfg.CloudinaryAPISecret,
-		)
+	log.Printf("Cloudinary Config Check - Name: '%s', Key: '%s', Secret Is Set: %v",
+		cfg.CloudinaryCloudName,
+		cfg.CloudinaryAPIKey,
+		cfg.CloudinaryAPISecret != "")
+
+	// Initialize Cloudinary. It's now mandatory.
+	if cfg.CloudinaryCloudName == "" || cfg.CloudinaryAPIKey == "" || cfg.CloudinaryAPISecret == "" {
+		log.Fatalf("FATAL: Cloudinary credentials are not configured. Please check your .env file.")
 	}
+
+	cld, err := cloudinary.NewFromParams(
+		cfg.CloudinaryCloudName,
+		cfg.CloudinaryAPIKey,
+		cfg.CloudinaryAPISecret,
+	)
+	if err != nil {
+		log.Fatalf("FATAL: Failed to initialize Cloudinary client: %v", err)
+	}
+
+	log.Println("✅ Cloudinary client initialized successfully!")
 
 	return &PhotoService{
 		cloudinary: cld,
@@ -38,13 +51,8 @@ func NewPhotoService(cfg *config.Config) *PhotoService {
 	}
 }
 
-// UploadPhoto uploads a photo to Cloudinary
+// UploadPhoto uploads a photo to Cloudinary. The fallback logic has been removed.
 func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
-	// Check if Cloudinary is configured
-	if s.cloudinary == nil {
-		return s.UploadPhotoSimple(file)
-	}
-
 	// Validate file type
 	if !s.isValidImageType(file.Filename) {
 		return "", fmt.Errorf("invalid file type. Allowed types: %s", constants.AllowedImageTypes)
@@ -52,7 +60,7 @@ func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 
 	// Check file size
 	if file.Size > constants.MaxFileSize {
-		return "", fmt.Errorf("file size too large. Maximum size: %d bytes", constants.MaxFileSize)
+		return "", fmt.Errorf("file size too large. Maximum size: %d MB", constants.MaxFileSize/1024/1024)
 	}
 
 	// Open file
@@ -62,10 +70,11 @@ func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 	}
 	defer src.Close()
 
-	// Generate unique filename
+	// Generate unique filename for Cloudinary
 	filename := s.generateFilename(file.Filename)
 
-	// Upload to Cloudinary with corrected parameters
+	// Upload to Cloudinary
+	log.Printf("Uploading '%s' to Cloudinary folder '%s'", filename, constants.UploadPath)
 	uploadResult, err := s.cloudinary.Upload.Upload(
 		context.Background(),
 		src,
@@ -73,8 +82,6 @@ func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 			PublicID:     filename,
 			Folder:       constants.UploadPath,
 			ResourceType: "image",
-			Format:       "auto",
-			// Remove problematic Transformation and Quality fields for now
 		},
 	)
 
@@ -82,30 +89,8 @@ func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 		return "", fmt.Errorf("failed to upload to Cloudinary: %v", err)
 	}
 
+	log.Printf("Successfully uploaded. Secure URL: %s", uploadResult.SecureURL)
 	return uploadResult.SecureURL, nil
-}
-
-// UploadPhotoSimple uploads photo with basic validation (fallback if Cloudinary not configured)
-func (s *PhotoService) UploadPhotoSimple(file *multipart.FileHeader) (string, error) {
-	// Validate file type
-	if !s.isValidImageType(file.Filename) {
-		return "", fmt.Errorf("invalid file type. Allowed types: %s", constants.AllowedImageTypes)
-	}
-
-	// Check file size
-	if file.Size > constants.MaxFileSize {
-		return "", fmt.Errorf("file size too large. Maximum size: %d bytes", constants.MaxFileSize)
-	}
-
-	// Generate mock URL (for development/testing)
-	filename := s.generateFilename(file.Filename)
-	mockURL := fmt.Sprintf("https://placeholder.dailytrackr.com/photos/%s", filename)
-
-	// In a real scenario, you would:
-	// 1. Save file to local storage or
-	// 2. Upload to another cloud storage service
-	// For now, return mock URL
-	return mockURL, nil
 }
 
 // isValidImageType checks if the file type is allowed
@@ -121,23 +106,24 @@ func (s *PhotoService) isValidImageType(filename string) bool {
 			return true
 		}
 	}
-
 	return false
 }
 
 // generateFilename generates a unique filename
 func (s *PhotoService) generateFilename(originalFilename string) string {
-	ext := filepath.Ext(originalFilename)
+	// Variabel 'ext' dihapus karena tidak digunakan.
 	timestamp := time.Now().Unix()
-	return fmt.Sprintf("activity_%d_%s%s", timestamp, generateRandomString(8), ext)
+	randomStr := generateRandomString(8)
+	// Return filename without extension, Cloudinary will handle it.
+	return fmt.Sprintf("activity_%d_%s", timestamp, randomStr)
 }
 
 // generateRandomString generates a random string of specified length
 func generateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
 	result := make([]byte, length)
+	// Use a more robust random source if available, but this is fine for filenames.
 	for i := range result {
-		// Use timestamp-based seeding for better randomness
 		seed := time.Now().UnixNano() + int64(i)
 		result[i] = charset[seed%int64(len(charset))]
 	}
