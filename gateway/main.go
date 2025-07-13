@@ -8,6 +8,7 @@ import (
 	"dailytrackr/gateway/proxy"
 	"dailytrackr/shared/config"
 
+	"github.com/gin-contrib/cors" // <-- 1. IMPORT PUSTAKA CORS
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,19 +23,16 @@ func main() {
 
 	r := gin.Default()
 
-	// Add CORS middleware
-	r.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(http.StatusNoContent)
-			return
-		}
-
-		c.Next()
-	})
+	// 2. GUNAKAN MIDDLEWARE CORS YANG LEBIH ANDAL
+	// Ini akan menangani preflight request (OPTIONS) dengan benar.
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"}, // Untuk development, bisa diganti dengan domain frontend nanti
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Gateway health check with service status
 	r.GET("/", func(c *gin.Context) {
@@ -103,16 +101,16 @@ func main() {
 
 	// Start gateway
 	port := ":" + cfg.GatewayPort
-	log.Printf("🚀 DailyTrackr Gateway starting on port %s", port)
-	log.Printf("📋 Available services:")
+	log.Printf("噫 DailyTrackr Gateway starting on port %s", port)
+	log.Printf("搭 Available services:")
 	log.Printf("   - User Service:         http://localhost:%s", cfg.UserServicePort)
 	log.Printf("   - Activity Service:     http://localhost:%s", cfg.ActivityPort)
 	log.Printf("   - Habit Service:        http://localhost:%s", cfg.HabitPort)
 	log.Printf("   - Statistics Service:   http://localhost:%s", cfg.StatPort)
 	log.Printf("   - AI Service:           http://localhost:%s", cfg.AIPort)
 	log.Printf("   - Notification Service: http://localhost:%s", cfg.NotificationPort)
-	log.Printf("🌐 Gateway URL: http://localhost:%s", cfg.GatewayPort)
-	log.Printf("📖 API Documentation: http://localhost:%s/api/docs", cfg.GatewayPort)
+	log.Printf("倹 Gateway URL: http://localhost:%s", cfg.GatewayPort)
+	log.Printf("当 API Documentation: http://localhost:%s/api/docs", cfg.GatewayPort)
 
 	log.Fatal(r.Run(port))
 }
@@ -190,21 +188,21 @@ func setupUtilityRoutes(r *gin.Engine, cfg *config.Config) {
 					"profile":  "GET /api/users/api/v1/users/profile",
 				},
 				"activities": map[string]string{
-					"create":       "POST /api/activities/api/v1/activities",
-					"list":         "GET /api/activities/api/v1/activities",
+					"create":       "POST /api/activities/api/v1/activities/",
+					"list":         "GET /api/activities/api/v1/activities/",
 					"get":          "GET /api/activities/api/v1/activities/:id",
 					"update":       "PUT /api/activities/api/v1/activities/:id",
 					"delete":       "DELETE /api/activities/api/v1/activities/:id",
 					"upload_photo": "POST /api/activities/api/v1/activities/:id/photo",
 				},
 				"habits": map[string]string{
-					"create":     "POST /api/habits/api/v1/habits",
-					"list":       "GET /api/habits/api/v1/habits",
+					"create":     "POST /api/habits/api/v1/habits/",
+					"list":       "GET /api/habits/api/v1/habits/",
 					"get":        "GET /api/habits/api/v1/habits/:id",
 					"update":     "PUT /api/habits/api/v1/habits/:id",
 					"delete":     "DELETE /api/habits/api/v1/habits/:id",
-					"create_log": "POST /api/habits/api/v1/habits/:id/logs",
-					"get_logs":   "GET /api/habits/api/v1/habits/:id/logs",
+					"create_log": "POST /api/habits/api/v1/habits/:id/logs/",
+					"get_logs":   "GET /api/habits/api/v1/habits/:id/logs/",
 					"get_stats":  "GET /api/habits/api/v1/habits/:id/stats",
 				},
 				"statistics": map[string]string{
