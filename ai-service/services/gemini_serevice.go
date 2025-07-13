@@ -2,15 +2,14 @@ package services
 
 import (
 	"bytes"
+	"dailytrackr/ai-service/models"
+	"dailytrackr/shared/config"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"time"
-
-	"dailytrackr/ai-service/models"
-	"dailytrackr/shared/config"
 )
 
 type GeminiService struct {
@@ -44,8 +43,11 @@ type GeminiCandidate struct {
 // NewGeminiService creates a new Gemini service instance
 func NewGeminiService(cfg *config.Config) *GeminiService {
 	return &GeminiService{
-		apiKey:  cfg.GeminiAPIKey,
-		baseURL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+		apiKey: cfg.GeminiAPIKey,
+		// =================================================================
+		// PERBAIKAN DI SINI: Ganti model ke gemini-1.5-flash-latest
+		// =================================================================
+		baseURL: "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent",
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -88,7 +90,7 @@ Buatkan ringkasan harian yang menarik dan motivational berdasarkan aktivitas ber
 
 Tugas:
 1. Buat ringkasan singkat (2-3 kalimat) tentang pencapaian hari ini
-2. Berikan insights tentang produktivitas 
+2. Berikan insights tentang produktivitas
 3. Tambahkan motivasi untuk hari berikutnya
 4. Gunakan bahasa Indonesia yang friendly dan encouraging
 5. Fokus pada aspek positif dan progress yang telah dibuat
@@ -274,7 +276,7 @@ Tugas:
 4. Sesuaikan dengan current productivity level
 5. Berikan tips yang realistis dan achievable
 
-Format: 
+Format:
 - Numbered list dengan penjelasan singkat
 - Bahasa Indonesia yang motivational
 - Fokus pada practical implementation
