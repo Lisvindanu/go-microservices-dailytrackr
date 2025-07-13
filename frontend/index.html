@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DailyTrackr - API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .auth-section {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+        }
+
+        .response-section {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .response-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .response-body {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .service-section {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .service-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .endpoint-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .endpoint-group h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🧠 DailyTrackr</h1>
+        <p>Microservices API Testing Dashboard</p>
+    </div>
+
+    <!-- Auth Section -->
+    <div class="auth-section">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('login')">Login</button>
+            <button class="tab" onclick="switchTab('register')">Register</button>
+        </div>
+
+        <div id="login-tab" class="tab-content active">
+            <h3>Login</h3>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="login-email" value="test123@example.com" placeholder="Email">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="login-password" value="password123" placeholder="Password">
+            </div>
+            <button class="btn" onclick="login()">Login</button>
+        </div>
+
+        <div id="register-tab" class="tab-content">
+            <h3>Register</h3>
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="register-username" placeholder="Username">
+            </div>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="register-email" placeholder="Email">
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="register-password" placeholder="Password">
+            </div>
+            <button class="btn" onclick="register()">Register</button>
+        </div>
+    </div>
+
+    <!-- User Info -->
+    <div id="user-info" class="user-info hidden">
+        <h3>Logged in as: <span id="username"></span></h3>
+        <p>Email: <span id="user-email"></span></p>
+        <p>JWT Token: <span id="jwt-token" style="font-family: monospace; font-size: 12px;"></span></p>
+        <button class="btn btn-danger" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- Main Content (Hidden until logged in) -->
+    <div id="main-content" class="hidden">
+        <div class="grid">
+            <!-- Activities Service -->
+            <div class="service-section">
+                <h3>📋 Activities Service</h3>
+
+                <div class="endpoint-group">
+                    <h4>Create Activity</h4>
+                    <div class="form-group">
+                        <label>Title:</label>
+                        <input type="text" id="activity-title" placeholder="Activity title">
+                    </div>
+                    <div class="form-group">
+                        <label>Start Time:</label>
+                        <input type="datetime-local" id="activity-start-time">
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (minutes):</label>
+                        <input type="number" id="activity-duration" placeholder="60">
+                    </div>
+                    <div class="form-group">
+                        <label>Cost (optional):</label>
+                        <input type="number" id="activity-cost" placeholder="50000">
+                    </div>
+                    <div class="form-group">
+                        <label>Note:</label>
+                        <textarea id="activity-note" placeholder="Activity notes"></textarea>
+                    </div>
+                    <button class="btn" onclick="createActivity()">Create Activity</button>
+                </div>
+
+                <div class="endpoint-group">
+                    <h4>Manage Activities</h4>
+                    <button class="btn btn-info" onclick="getActivities()">Get All Activities</button>
+                    <button class="btn btn-warning" onclick="getActivitiesWithDateRange()">Get Activities (Date Range)</button>
+                </div>
+            </div>
+
+            <!-- Habits Service -->
+            <div class="service-section">
+                <h3>🎯 Habits Service</h3>
+
+                <div class="endpoint-group">
+                    <h4>Create Habit</h4>
+                    <div class="form-group">
+                        <label>Title:</label>
+                        <input type="text" id="habit-title" placeholder="Daily exercise">
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date:</label>
+                        <input type="date" id="habit-start-date">
+                    </div>
+                    <div class="form-group">
+                        <label>End Date:</label>
+                        <input type="date" id="habit-end-date">
+                    </div>
+                    <div class="form-group">
+                        <label>Reminder Time:</label>
+                        <input type="time" id="habit-reminder-time" value="08:00">
+                    </div>
+                    <button class="btn" onclick="createHabit()">Create Habit</button>
+                </div>
+
+                <div class="endpoint-group">
+                    <h4>Manage Habits</h4>
+                    <button class="btn btn-info" onclick="getHabits()">Get All Habits</button>
+                    <button class="btn btn-info" onclick="getActiveHabits()">Get Active Habits</button>
+                </div>
+
+                <div class="endpoint-group">
+                    <h4>Habit Logs</h4>
+                    <div class="form-group">
+                        <label>Habit ID:</label>
+                        <input type="number" id="log-habit-id" placeholder="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Date:</label>
+                        <input type="date" id="log-date">
+                    </div>
+                    <div class="form-group">
+                        <label>Status:</label>
+                        <select id="log-status">
+                            <option value="DONE">DONE</option>
+                            <option value="SKIPPED">SKIPPED</option>
+                            <option value="FAILED">FAILED</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Note:</label>
+                        <textarea id="log-note" placeholder="Log notes"></textarea>
+                    </div>
+                    <button class="btn" onclick="createHabitLog()">Log Habit</button>
+                </div>
+            </div>
+
+            <!-- Statistics Service -->
+            <div class="service-section">
+                <h3>📊 Statistics Service</h3>
+
+                <div class="endpoint-group">
+                    <h4>Dashboard & Reports</h4>
+                    <button class="btn btn-success" onclick="getDashboard()">Get Dashboard</button>
+                    <button class="btn btn-info" onclick="getActivitySummary()">Activity Summary</button>
+                    <button class="btn btn-info" onclick="getHabitProgress()">Habit Progress</button>
+                    <button class="btn btn-warning" onclick="getExpenseReport()">Expense Report</button>
+                </div>
+
+                <div class="endpoint-group">
+                    <h4>Charts</h4>
+                    <button class="btn" onclick="getActivityChart('daily', 7)">Daily Chart (7 days)</button>
+                    <button class="btn" onclick="getActivityChart('weekly', 4)">Weekly Chart (4 weeks)</button>
+                    <button class="btn" onclick="getActivityChart('monthly', 6)">Monthly Chart (6 months)</button>
+                </div>
+            </div>
+
+            <!-- AI Service -->
+            <div class="service-section">
+                <h3>🧠 AI Service</h3>
+
+                <div class="endpoint-group">
+                    <h4>AI Insights</h4>
+                    <div class="form-group">
+                        <label>Date for Summary (optional):</label>
+                        <input type="date" id="ai-summary-date">
+                    </div>
+                    <button class="btn btn-success" onclick="generateDailySummary()">Generate Daily Summary</button>
+                    <button class="btn btn-info" onclick="generateHabitRecommendation()">Habit Recommendations</button>
+                    <button class="btn btn-info" onclick="getAIInsights()">Get AI Insights</button>
+                    <button class="btn btn-warning" onclick="analyzeActivities()">Analyze Activities</button>
+                    <button class="btn" onclick="getProductivityTips()">Get Productivity Tips</button>
+                </div>
+            </div>
+
+            <!-- Health Checks -->
+            <div class="service-section">
+                <h3>🔍 Service Health & Direct Testing</h3>
+
+                <div class="endpoint-group">
+                    <h4>Gateway Routes</h4>
+                    <button class="btn btn-info" onclick="checkGateway()">Gateway Root</button>
+                    <button class="btn btn-info" onclick="checkUserService()">User Service via Gateway</button>
+                    <button class="btn btn-info" onclick="checkActivityService()">Activity Service via Gateway</button>
+                    <button class="btn btn-info" onclick="checkHabitService()">Habit Service via Gateway</button>
+                    <button class="btn btn-info" onclick="checkStatService()">Statistics Service via Gateway</button>
+                    <button class="btn btn-info" onclick="checkAIService()">AI Service via Gateway</button>
+                </div>
+
+                <div class="endpoint-group">
+                    <h4>Direct Service Testing (Bypass Gateway)</h4>
+                    <button class="btn btn-warning" onclick="testDirectUser()">Direct User Service</button>
+                    <button class="btn btn-warning" onclick="testDirectActivity()">Direct Activity Service</button>
+                    <button class="btn btn-warning" onclick="testDirectHabit()">Direct Habit Service</button>
+                    <button class="btn btn-warning" onclick="testDirectStat()">Direct Stat Service</button>
+                    <button class="btn btn-warning" onclick="testDirectAI()">Direct AI Service</button>
+                </div>
+
+                <div class="endpoint-group">
+                    <h4>Debug Tools</h4>
+                    <button class="btn" onclick="debugCreateActivity()">Debug Activity Creation</button>
+                    <button class="btn" onclick="debugCreateHabit()">Debug Habit Creation</button>
+                    <button class="btn" onclick="showCurrentToken()">Show JWT Token</button>
+                    <button class="btn btn-success" onclick="createActivityAlt()">Create Activity (Alt Route)</button>
+                    <button class="btn btn-success" onclick="createHabitAlt()">Create Habit (Alt Route)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Section -->
+    <div class="response-section">
+        <div class="response-header">
+            <h3>API Response</h3>
+            <div id="status-indicator" class="status-indicator">Ready</div>
+        </div>
+        <div id="response-body" class="response-body">
+            Ready to test APIs. Please login first.
+        </div>
+    </div>
+</div>
+
+<script>
+    // Configuration
+    const API_BASE = 'http://localhost:3000/api';
+    let currentToken = null;
+    let currentUser = null;
+
+    // Utility Functions
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+
+    function updateStatus(isSuccess, statusCode = null) {
+        const indicator = document.getElementById('status-indicator');
+        if (isSuccess) {
+            indicator.className = 'status-indicator status-success';
+            indicator.textContent = statusCode ? `Success (${statusCode})` : 'Success';
+        } else {
+            indicator.className = 'status-indicator status-error';
+            indicator.textContent = statusCode ? `Error (${statusCode})` : 'Error';
+        }
+    }
+
+    function displayResponse(data, isSuccess = true, statusCode = null) {
+        const responseBody = document.getElementById('response-body');
+        responseBody.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        updateStatus(isSuccess, statusCode);
+    }
+
+    function switchTab(tabName) {
+        // Remove active class from all tabs
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        // Add active class to selected tab
+        event.target.classList.add('active');
+        document.getElementById(tabName + '-tab').classList.add('active');
+    }
+
+    async function makeRequest(url, options = {}) {
+        try {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            if (currentToken) {
+                headers['Authorization'] = `Bearer ${currentToken}`;
+            }
+
+            console.log('🔄 Making request:', {
+                url,
+                method: options.method || 'GET',
+                headers,
+                hasBody: !!options.body
+            });
+
+            const response = await fetch(url, {
+                ...options,
+                headers
+            });
+
+            console.log('📡 Response received:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+                headers: Object.fromEntries(response.headers.entries())
+            });
+
+            let data;
+            const contentType = response.headers.get('content-type');
+
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                const textData = await response.text();
+                data = {
+                    raw_response: textData,
+                    content_type: contentType,
+                    note: 'Non-JSON response received'
+                };
+            }
+
+            displayResponse(data, response.ok, response.status);
+
+            if (!response.ok) {
+                const errorMsg = data.message || data.error || `HTTP ${response.status}: ${response.statusText}`;
+                showNotification(errorMsg, 'error');
+
+                console.error('❌ Request failed:', {
+                    url,
+                    status: response.status,
+                    data
+                });
+            } else {
+                console.log('✅ Request successful:', data);
+            }
+
+            return { data, ok: response.ok, status: response.status };
+        } catch (error) {
+            console.error('🚨 Network Error:', error);
+
+            const errorData = {
+                error: 'Network Error',
+                message: error.message,
+                url,
+                timestamp: new Date().toISOString()
+            };
+
+            displayResponse(errorData, false);
+            showNotification(`Network error: ${error.message}`, 'error');
+            return { data: null, ok: false, error };
+        }
+    }
+
+    // Auth Functions
+    async function login() {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+
+        const result = await makeRequest(`${API_BASE}/users/auth/login`, {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+        });
+
+        if (result.ok) {
+            currentToken = result.data.data.token;
+            currentUser = result.data.data.user;
+
+            document.getElementById('username').textContent = currentUser.username;
+            document.getElementById('user-email').textContent = currentUser.email;
+            document.getElementById('jwt-token').textContent = currentToken.substring(0, 50) + '...';
+
+            document.getElementById('user-info').classList.remove('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+
+            showNotification('Login successful!');
+
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const now = new Date().toISOString().slice(0, 16);
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 30);
+
+            document.getElementById('habit-start-date').value = today;
+            document.getElementById('habit-end-date').value = tomorrow.toISOString().split('T')[0];
+            document.getElementById('activity-start-time').value = now;
+            document.getElementById('log-date').value = today;
+            document.getElementById('ai-summary-date').value = today;
+        }
+    }
+
+    async function register() {
+        const username = document.getElementById('register-username').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+
+        const result = await makeRequest(`${API_BASE}/users/auth/register`, {
+            method: 'POST',
+            body: JSON.stringify({ username, email, password })
+        });
+
+        if (result.ok) {
+            showNotification('Registration successful! You are now logged in.');
+            currentToken = result.data.data.token;
+            currentUser = result.data.data.user;
+
+            document.getElementById('username').textContent = currentUser.username;
+            document.getElementById('user-email').textContent = currentUser.email;
+            document.getElementById('jwt-token').textContent = currentToken.substring(0, 50) + '...';
+
+            document.getElementById('user-info').classList.remove('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+        }
+    }
+
+    function logout() {
+        currentToken = null;
+        currentUser = null;
+        document.getElementById('user-info').classList.add('hidden');
+        document.getElementById('main-content').classList.add('hidden');
+        displayResponse('Logged out successfully');
+        showNotification('Logged out successfully');
+    }
+
+    // Activity Functions
+    async function createActivity() {
+        const title = document.getElementById('activity-title').value;
+        const startTime = document.getElementById('activity-start-time').value;
+        const duration = parseInt(document.getElementById('activity-duration').value);
+        const cost = document.getElementById('activity-cost').value;
+        const note = document.getElementById('activity-note').value;
+
+        if (!title || !startTime || !duration) {
+            showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        const activity = {
+            title,
+            start_time: new Date(startTime).toISOString(),
+            duration_mins: duration,
+            note
+        };
+
+        if (cost && cost.trim() !== '') {
+            activity.cost = parseInt(cost);
+        }
+
+        // Remove trailing slash to avoid 307 redirect
+        await makeRequest(`${API_BASE}/activities/api/v1/activities`, {
+            method: 'POST',
+            body: JSON.stringify(activity)
+        });
+    }
+
+    async function getActivities() {
+        await makeRequest(`${API_BASE}/activities/api/v1/activities`);
+    }
+
+    async function getActivitiesWithDateRange() {
+        const startDate = '2025-07-01';
+        const endDate = '2025-07-31';
+        await makeRequest(`${API_BASE}/activities/api/v1/activities?start_date=${startDate}&end_date=${endDate}`);
+    }
+
+    // Habit Functions
+    async function createHabit() {
+        const title = document.getElementById('habit-title').value;
+        const startDate = document.getElementById('habit-start-date').value;
+        const endDate = document.getElementById('habit-end-date').value;
+        const reminderTime = document.getElementById('habit-reminder-time').value;
+
+        if (!title || !startDate || !endDate) {
+            showNotification('Please fill in all required fields', 'error');
+            return;
+        }
+
+        const habit = {
+            title,
+            start_date: startDate,
+            end_date: endDate,
+            reminder_time: reminderTime
+        };
+
+        // Remove trailing slash to avoid 307 redirect
+        await makeRequest(`${API_BASE}/habits/api/v1/habits`, {
+            method: 'POST',
+            body: JSON.stringify(habit)
+        });
+    }
+
+    async function getHabits() {
+        await makeRequest(`${API_BASE}/habits/api/v1/habits`);
+    }
+
+    async function getActiveHabits() {
+        await makeRequest(`${API_BASE}/habits/api/v1/habits?active=true`);
+    }
+
+    async function createHabitLog() {
+        const habitId = document.getElementById('log-habit-id').value;
+        const date = document.getElementById('log-date').value;
+        const status = document.getElementById('log-status').value;
+        const note = document.getElementById('log-note').value;
+
+        if (!habitId || !date || !status) {
+            showNotification('Please fill in Habit ID, Date, and Status', 'error');
+            return;
+        }
+
+        const log = {
+            habit_id: parseInt(habitId),
+            date,
+            status,
+            note
+        };
+
+        await makeRequest(`${API_BASE}/habits/api/v1/habits/${habitId}/logs`, {
+            method: 'POST',
+            body: JSON.stringify(log)
+        });
+    }
+
+    // Statistics Functions
+    async function getDashboard() {
+        await makeRequest(`${API_BASE}/stats/api/v1/stats/dashboard`);
+    }
+
+    async function getActivitySummary() {
+        await makeRequest(`${API_BASE}/stats/api/v1/stats/activities/summary`);
+    }
+
+    async function getHabitProgress() {
+        await makeRequest(`${API_BASE}/stats/api/v1/stats/habits/progress`);
+    }
+
+    async function getExpenseReport() {
+        await makeRequest(`${API_BASE}/stats/api/v1/stats/expenses/report`);
+    }
+
+    async function getActivityChart(type, period) {
+        await makeRequest(`${API_BASE}/stats/api/v1/stats/activities/chart?type=${type}&period=${period}`);
+    }
+
+    // AI Functions
+    async function generateDailySummary() {
+        const date = document.getElementById('ai-summary-date').value;
+        const url = date ?
+            `${API_BASE}/ai/api/v1/ai/daily-summary?date=${date}` :
+            `${API_BASE}/ai/api/v1/ai/daily-summary`;
+        await makeRequest(url, { method: 'POST' });
+    }
+
+    async function generateHabitRecommendation() {
+        await makeRequest(`${API_BASE}/ai/api/v1/ai/habit-recommendation`, { method: 'POST' });
+    }
+
+    async function getAIInsights() {
+        await makeRequest(`${API_BASE}/ai/api/v1/ai/insights`);
+    }
+
+    async function analyzeActivities() {
+        await makeRequest(`${API_BASE}/ai/api/v1/ai/analyze-activities?days=7`);
+    }
+
+    async function getProductivityTips() {
+        await makeRequest(`${API_BASE}/ai/api/v1/ai/productivity-tips`);
+    }
+
+    // Health Check Functions
+    async function checkGateway() {
+        await makeRequest('http://localhost:3000/');
+    }
+
+    async function checkUserService() {
+        await makeRequest(`${API_BASE}/users/health`);
+    }
+
+    async function checkActivityService() {
+        await makeRequest(`${API_BASE}/activities/health`);
+    }
+
+    async function checkHabitService() {
+        await makeRequest(`${API_BASE}/habits/health`);
+    }
+
+    async function checkStatService() {
+        await makeRequest(`${API_BASE}/stats/health`);
+    }
+
+    async function checkAIService() {
+        await makeRequest(`${API_BASE}/ai/health`);
+    }
+
+    // Direct Service Testing (Bypass Gateway)
+    async function testDirectUser() {
+        await makeRequest('http://localhost:3001/health');
+    }
+
+    async function testDirectActivity() {
+        await makeRequest('http://localhost:3002/health');
+    }
+
+    async function testDirectHabit() {
+        await makeRequest('http://localhost:3003/health');
+    }
+
+    async function testDirectStat() {
+        await makeRequest('http://localhost:3005/health');
+    }
+
+    async function testDirectAI() {
+        await makeRequest('http://localhost:3006/health');
+    }
+
+    // Debug Functions
+    async function debugCreateActivity() {
+        const testActivity = {
+            title: "Debug Test Activity",
+            start_time: new Date().toISOString(),
+            duration_mins: 60,
+            cost: 10000,
+            note: "This is a debug test"
+        };
+
+        console.log('Debug Activity Payload:', testActivity);
+        console.log('JWT Token:', currentToken?.substring(0, 50) + '...');
+        console.log('Request URL:', `${API_BASE}/activities/api/v1/activities`);
+
+        await makeRequest(`${API_BASE}/activities/api/v1/activities`, {
+            method: 'POST',
+            body: JSON.stringify(testActivity)
+        });
+    }
+
+    async function debugCreateHabit() {
+        const today = new Date().toISOString().split('T')[0];
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30);
+
+        const testHabit = {
+            title: "Debug Test Habit",
+            start_date: today,
+            end_date: endDate.toISOString().split('T')[0],
+            reminder_time: "09:00"
+        };
+
+        console.log('Debug Habit Payload:', testHabit);
+        console.log('JWT Token:', currentToken?.substring(0, 50) + '...');
+        console.log('Request URL:', `${API_BASE}/habits/api/v1/habits`);
+
+        await makeRequest(`${API_BASE}/habits/api/v1/habits`, {
+            method: 'POST',
+            body: JSON.stringify(testHabit)
+        });
+    }
+
+    function showCurrentToken() {
+        if (currentToken) {
+            displayResponse({
+                token: currentToken,
+                user: currentUser,
+                token_length: currentToken.length,
+                is_valid: currentToken.startsWith('eyJ')
+            });
+        } else {
+            displayResponse({ error: 'No token found. Please login first.' }, false);
+        }
+    }
+
+    // Alternative Functions with simplified routing
+    async function createActivityAlt() {
+        const testActivity = {
+            title: "Test Activity via Gateway",
+            start_time: new Date().toISOString(),
+            duration_mins: 90,
+            cost: 50000,
+            note: "Testing simplified routing"
+        };
+
+        console.log('Alt Activity Payload:', testActivity);
+
+        // Try different routing approaches
+        const urls = [
+            `${API_BASE}/activities/api/v1/activities`,
+            'http://localhost:3000/api/activities',
+            'http://localhost:3002/api/v1/activities'
+        ];
+
+        for (const url of urls) {
+            console.log(`Trying URL: ${url}`);
+            const result = await makeRequest(url, {
+                method: 'POST',
+                body: JSON.stringify(testActivity)
+            });
+
+            if (result.ok) {
+                showNotification(`Success with URL: ${url}`, 'success');
+                break;
+            }
+        }
+    }
+
+    async function createHabitAlt() {
+        const today = new Date().toISOString().split('T')[0];
+        const endDate = new Date();
+        endDate.setDate(endDate.getDate() + 30);
+
+        const testHabit = {
+            title: "Test Habit via Gateway",
+            start_date: today,
+            end_date: endDate.toISOString().split('T')[0],
+            reminder_time: "09:00"
+        };
+
+        console.log('Alt Habit Payload:', testHabit);
+
+        // Try different routing approaches
+        const urls = [
+            `${API_BASE}/habits/api/v1/habits`,
+            'http://localhost:3000/api/habits',
+            'http://localhost:3003/api/v1/habits'
+        ];
+
+        for (const url of urls) {
+            console.log(`Trying URL: ${url}`);
+            const result = await makeRequest(url, {
+                method: 'POST',
+                body: JSON.stringify(testHabit)
+            });
+
+            if (result.ok) {
+                showNotification(`Success with URL: ${url}`, 'success');
+                break;
+            }
+        }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        displayResponse('Welcome to DailyTrackr API Tester! Please login to start testing endpoints.');
+    });
+</script>
+</body>
+</html>
