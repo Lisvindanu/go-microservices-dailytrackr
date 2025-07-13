@@ -182,5 +182,14 @@ auto-save-list
 tramp
 .\#*
 
+# Test binary, built with `go test -c`
+*.test
+
+# PowerShell scripts
+*.ps1
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
 # Project specific
 dailytrackr_App.txt

@@ -62,6 +62,7 @@ func main() {
 	log.Printf("   - User Service: http://localhost:%s", cfg.UserServicePort)
 	log.Printf("   - Activity Service: http://localhost:%s", cfg.ActivityPort)
 	log.Printf("   - Habit Service: http://localhost:%s", cfg.HabitPort)
+	log.Printf("   - Stat Service: http://localhost:%s", cfg.StatPort)
 	log.Printf("   - AI Service: http://localhost:%s", cfg.AIPort)
 	log.Printf("🌐 Gateway URL: http://localhost:%s", cfg.GatewayPort)
 
@@ -80,7 +81,7 @@ func setupRoutes(r *gin.Engine, cfg *config.Config) {
 		userRoutes.Any("/api/v1/users/*path", userProxy.ProxyRequest)
 	}
 
-	// Activity Service routes (when ready)
+	// Activity Service routes
 	activityProxy := proxy.NewServiceProxy("http://localhost:" + cfg.ActivityPort)
 
 	activityRoutes := r.Group("/api/activities")
@@ -89,7 +90,7 @@ func setupRoutes(r *gin.Engine, cfg *config.Config) {
 		activityRoutes.Any("/api/v1/activities/*path", activityProxy.ProxyRequest)
 	}
 
-	// Habit Service routes (when ready)
+	// Habit Service routes
 	habitProxy := proxy.NewServiceProxy("http://localhost:" + cfg.HabitPort)
 
 	habitRoutes := r.Group("/api/habits")
@@ -98,7 +99,16 @@ func setupRoutes(r *gin.Engine, cfg *config.Config) {
 		habitRoutes.Any("/api/v1/habits/*path", habitProxy.ProxyRequest)
 	}
 
-	// AI Service routes (when ready)
+	// Statistics Service routes (NEW!)
+	statProxy := proxy.NewServiceProxy("http://localhost:" + cfg.StatPort)
+
+	statRoutes := r.Group("/api/stats")
+	{
+		statRoutes.Any("/health", statProxy.ProxyRequest)
+		statRoutes.Any("/api/v1/stats/*path", statProxy.ProxyRequest)
+	}
+
+	// AI Service routes
 	aiProxy := proxy.NewServiceProxy("http://localhost:" + cfg.AIPort)
 
 	aiRoutes := r.Group("/api/ai")
