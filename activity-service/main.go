@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"dailytrackr/activity-service/handlers"
 	"dailytrackr/activity-service/routes"
@@ -11,12 +12,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/joho/godotenv" // <-- 1. IMPORT
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// 2. TAMBAHKAN BARIS INI UNTUK MEMUAT .env DARI FOLDER YANG SAMA
-	// Ini akan memastikan kredensial Cloudinary terbaca.
+	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file not found, using system environment variables")
 	}
@@ -47,12 +47,31 @@ func main() {
 		},
 	})
 
-	// Middleware
+	// ================================================
+	// FIXED CORS MIDDLEWARE - No AllowCredentials with wildcard
+	// ================================================
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders: "Content-Type, Authorization",
+		AllowOrigins:     "*",
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin,Content-Type,Authorization,Accept",
+		ExposeHeaders:    "Content-Length",
+		AllowCredentials: false,                             // 🔧 FIXED: Set to false when using wildcard
+		MaxAge:           int(12 * time.Hour / time.Second), // 12 hours in seconds
 	}))
+
+	// Additional manual CORS handling untuk edge cases
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("Access-Control-Allow-Origin", "*")
+		c.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		c.Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept")
+		c.Set("Access-Control-Max-Age", "43200")
+
+		if c.Method() == "OPTIONS" {
+			return c.SendStatus(fiber.StatusNoContent)
+		}
+
+		return c.Next()
+	})
 
 	app.Use(logger.New())
 
@@ -62,6 +81,7 @@ func main() {
 			"service": "activity-service",
 			"status":  "healthy",
 			"version": "1.0.0",
+			"cors":    "enabled",
 		})
 	})
 

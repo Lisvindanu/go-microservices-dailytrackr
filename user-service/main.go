@@ -1,14 +1,17 @@
+// user-service/main.go
 package main
 
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"dailytrackr/shared/config"
 	"dailytrackr/shared/database"
 	"dailytrackr/user-service/handlers"
 	"dailytrackr/user-service/routes"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -33,11 +36,24 @@ func main() {
 
 	r := gin.Default()
 
-	// Add CORS middleware
+	// ================================================
+	// FIXED CORS MIDDLEWARE - No AllowCredentials with wildcard
+	// ================================================
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"}, // Untuk development
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false, // 🔧 FIXED: Set to false when using wildcard
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Additional manual CORS handling untuk edge cases
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept")
+		c.Header("Access-Control-Max-Age", "43200")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
@@ -53,6 +69,7 @@ func main() {
 			"service": "user-service",
 			"status":  "healthy",
 			"version": "1.0.0",
+			"cors":    "enabled",
 		})
 	})
 

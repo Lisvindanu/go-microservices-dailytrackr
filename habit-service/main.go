@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"dailytrackr/habit-service/handlers"
 	"dailytrackr/habit-service/routes"
@@ -29,11 +30,34 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
+	// ================================================
+	// FIXED CORS MIDDLEWARE - No AllowCredentials with wildcard
+	// ================================================
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{echo.GET, echo.PUT, echo.POST, echo.DELETE},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		ExposeHeaders:    []string{echo.HeaderContentLength},
+		AllowCredentials: false,                             // 🔧 FIXED: Set to false when using wildcard
+		MaxAge:           int(12 * time.Hour / time.Second), // 12 hours in seconds
 	}))
+
+	// Additional manual CORS handling untuk edge cases
+	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+			c.Response().Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			c.Response().Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept")
+			c.Response().Header().Set("Access-Control-Max-Age", "43200")
+
+			if c.Request().Method == "OPTIONS" {
+				return c.NoContent(204)
+			}
+
+			return next(c)
+		}
+	})
 
 	// Health check endpoint
 	e.GET("/health", func(c echo.Context) error {
@@ -41,6 +65,7 @@ func main() {
 			"service": "habit-service",
 			"status":  "healthy",
 			"version": "1.0.0",
+			"cors":    "enabled",
 		})
 	})
 

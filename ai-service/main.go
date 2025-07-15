@@ -3,12 +3,14 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"dailytrackr/ai-service/handlers"
 	"dailytrackr/ai-service/routes"
 	"dailytrackr/shared/config"
 	"dailytrackr/shared/database"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,11 +37,24 @@ func main() {
 
 	r := gin.Default()
 
-	// Add CORS middleware
+	// ================================================
+	// FIXED CORS MIDDLEWARE - No AllowCredentials with wildcard
+	// ================================================
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"}, // Untuk development
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false, // 🔧 FIXED: Set to false when using wildcard
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Additional manual CORS handling untuk edge cases
 	r.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept")
+		c.Header("Access-Control-Max-Age", "43200")
 
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(http.StatusNoContent)
@@ -55,13 +70,8 @@ func main() {
 			"service":    "ai-service",
 			"status":     "healthy",
 			"version":    "1.0.0",
+			"cors":       "enabled",
 			"ai_enabled": cfg.GeminiAPIKey != "",
-			"features": []string{
-				"daily_summary",
-				"habit_recommendation",
-				"activity_insights",
-				"productivity_analysis",
-			},
 		})
 	})
 
@@ -74,14 +84,5 @@ func main() {
 	// Start server
 	port := ":" + cfg.AIPort
 	log.Printf("🚀 AI Service starting on port %s", port)
-	log.Printf("🧠 Gemini AI integration: ✅ ENABLED")
-	log.Printf("📋 Available endpoints:")
-	log.Printf("   - GET  /health")
-	log.Printf("   - POST /api/v1/ai/daily-summary")
-	log.Printf("   - POST /api/v1/ai/habit-recommendation")
-	log.Printf("   - GET  /api/v1/ai/insights")
-	log.Printf("   - POST /api/v1/ai/analyze-activities")
-	log.Printf("   - GET  /api/v1/ai/productivity-tips")
-
 	log.Fatal(r.Run(port))
 }
