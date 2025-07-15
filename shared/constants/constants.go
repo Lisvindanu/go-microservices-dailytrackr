@@ -64,42 +64,83 @@ const (
 	BearerPrefix        = "Bearer "
 )
 
-// Error Messages
+// Error Messages - General
 const (
 	ErrInvalidToken       = "invalid or expired token"
 	ErrMissingToken       = "authorization token required"
 	ErrInvalidCredentials = "invalid email or password"
-	ErrUserNotFound       = "user not found"
-	ErrEmailAlreadyExists = "email already exists"
-	ErrUsernameExists     = "username already exists"
-	ErrActivityNotFound   = "activity not found"
-	ErrHabitNotFound      = "habit not found"
-	ErrHabitLogNotFound   = "habit log not found"
 	ErrUnauthorizedAccess = "unauthorized access to resource"
 	ErrInvalidRequestBody = "invalid request body"
 	ErrDatabaseConnection = "database connection error"
 )
 
-// Success Messages
+// Error Messages - User Related
 const (
-	MsgUserCreated     = "user created successfully"
-	MsgLoginSuccess    = "login successful"
+	ErrUserNotFound            = "user not found"
+	ErrEmailAlreadyExists      = "email already exists"
+	ErrUsernameExists          = "username already exists"
+	ErrInvalidCurrentPassword  = "current password is incorrect"
+	ErrSamePassword            = "new password must be different from current password"
+	ErrWeakPassword            = "password must be at least 6 characters long"
+	ErrInvalidFileType         = "invalid file type for profile photo"
+	ErrFileTooLarge            = "file size too large"
+	ErrPhotoUploadFailed       = "failed to upload profile photo"
+	ErrPhotoServiceUnavailable = "photo upload service is not available"
+	ErrInvalidBio              = "bio contains invalid content"
+	ErrReservedUsername        = "username is reserved and cannot be used"
+)
+
+// Error Messages - Activity Related
+const (
+	ErrActivityNotFound = "activity not found"
+)
+
+// Error Messages - Habit Related
+const (
+	ErrHabitNotFound    = "habit not found"
+	ErrHabitLogNotFound = "habit log not found"
+)
+
+// Success Messages - User Related
+const (
+	MsgUserCreated          = "user created successfully"
+	MsgLoginSuccess         = "login successful"
+	MsgProfileUpdated       = "profile updated successfully"
+	MsgPasswordChanged      = "password changed successfully"
+	MsgProfilePhotoUploaded = "profile photo uploaded successfully"
+	MsgAccountDeleted       = "account deleted successfully"
+	MsgProfileRetrieved     = "profile retrieved successfully"
+)
+
+// Success Messages - Activity Related
+const (
 	MsgActivityCreated = "activity created successfully"
 	MsgActivityUpdated = "activity updated successfully"
 	MsgActivityDeleted = "activity deleted successfully"
+)
+
+// Success Messages - Habit Related
+const (
 	MsgHabitCreated    = "habit created successfully"
 	MsgHabitUpdated    = "habit updated successfully"
 	MsgHabitDeleted    = "habit deleted successfully"
 	MsgHabitLogCreated = "habit log created successfully"
 	MsgHabitLogUpdated = "habit log updated successfully"
-	MsgPhotoUploaded   = "photo uploaded successfully"
 )
 
-// File Upload
+// Success Messages - General
 const (
-	MaxFileSize       = 10 << 20 // 10 MB
-	AllowedImageTypes = "jpg,jpeg,png,gif,webp"
-	UploadPath        = "uploads/dailytrackr/"
+	MsgPhotoUploaded = "photo uploaded successfully"
+)
+
+// File Upload Settings
+const (
+	MaxFileSize         = 10 << 20 // 10 MB for activities
+	MaxProfilePhotoSize = 5 << 20  // 5 MB for profile photos
+	AllowedImageTypes   = "jpg,jpeg,png,gif,webp"
+	AllowedProfileTypes = "jpg,jpeg,png,webp"
+	UploadPath          = "uploads/dailytrackr/"
+	ProfilePhotoPath    = "uploads/dailytrackr/profiles/"
 )
 
 // Notification Types
@@ -120,4 +161,14 @@ const (
 	DateFormat     = "2006-01-02"
 	TimeFormat     = "15:04"
 	DateTimeFormat = "2006-01-02T15:04:05Z"
+)
+
+// User Profile Validation
+const (
+	MinUsernameLength = 3
+	MaxUsernameLength = 50
+	MaxEmailLength    = 255
+	MinPasswordLength = 6
+	MaxPasswordLength = 128
+	MaxBioLength      = 500
 )

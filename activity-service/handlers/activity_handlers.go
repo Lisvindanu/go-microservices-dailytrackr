@@ -79,7 +79,7 @@ func (h *ActivityHandlers) CreateActivity(c *fiber.Ctx) error {
 	}
 
 	// Convert to response DTO
-	response := convertToActivityResponse(activity)
+	response := h.convertToActivityResponse(activity)
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"success": true,
@@ -170,7 +170,7 @@ func (h *ActivityHandlers) GetActivities(c *fiber.Ctx) error {
 	// Convert to response DTOs
 	var responses []dto.ActivityResponse
 	for _, activity := range activities {
-		responses = append(responses, convertToActivityResponse(&activity))
+		responses = append(responses, h.convertToActivityResponse(&activity))
 	}
 
 	// Calculate total pages
@@ -225,7 +225,7 @@ func (h *ActivityHandlers) GetActivity(c *fiber.Ctx) error {
 		})
 	}
 
-	response := convertToActivityResponse(&activity)
+	response := h.convertToActivityResponse(&activity)
 
 	return c.JSON(fiber.Map{
 		"success": true,
@@ -320,7 +320,7 @@ func (h *ActivityHandlers) UpdateActivity(c *fiber.Ctx) error {
 		})
 	}
 
-	response := convertToActivityResponse(&activity)
+	response := h.convertToActivityResponse(&activity)
 
 	return c.JSON(fiber.Map{
 		"success": true,
@@ -413,7 +413,7 @@ func (h *ActivityHandlers) UploadPhoto(c *fiber.Ctx) error {
 		})
 	}
 
-	// PERBAIKAN: Panggil fungsi UploadPhoto yang benar, bukan UploadPhotoSimple
+	// Upload photo using photo service
 	photoURL, err := h.photoService.UploadPhoto(file)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -433,17 +433,21 @@ func (h *ActivityHandlers) UploadPhoto(c *fiber.Ctx) error {
 		})
 	}
 
+	// ✅ FIXED: Use common DTO PhotoUploadResponse
+	response := dto.PhotoUploadResponse{
+		URL:       photoURL,
+		SecureURL: photoURL,
+	}
+
 	return c.JSON(fiber.Map{
 		"success": true,
 		"message": constants.MsgPhotoUploaded,
-		"data": dto.PhotoUploadResponse{
-			URL: photoURL,
-		},
+		"data":    response,
 	})
 }
 
 // convertToActivityResponse converts Activity model to ActivityResponse DTO
-func convertToActivityResponse(activity *models.Activity) dto.ActivityResponse {
+func (h *ActivityHandlers) convertToActivityResponse(activity *models.Activity) dto.ActivityResponse {
 	return dto.ActivityResponse{
 		ID:           activity.ID,
 		UserID:       activity.UserID,

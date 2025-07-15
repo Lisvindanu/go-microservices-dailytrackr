@@ -39,9 +39,4 @@ type ActivityListResponse struct {
 	Limit      int                `json:"limit"`
 }
 
-// Photo Upload
-type PhotoUploadResponse struct {
-	URL       string `json:"url"`
-	PublicID  string `json:"public_id"`
-	SecureURL string `json:"secure_url"`
-}
+// Note: PhotoUploadResponse sekarang di common_dto.go untuk menghindari duplikasi

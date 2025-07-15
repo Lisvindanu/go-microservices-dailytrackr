@@ -23,8 +23,24 @@ func SetupUserRoutes(r *gin.Engine, userHandlers *handlers.UserHandlers) {
 		// User profile routes
 		users := api.Group("/users")
 		{
+			// Profile management
 			users.GET("/profile", userHandlers.GetProfile)
-			users.GET("/:id", userHandlers.GetUserByID) // For other services
+			users.PUT("/profile", userHandlers.UpdateProfile)
+			users.PATCH("/profile", userHandlers.UpdateProfile) // Support both PUT and PATCH
+
+			// Password management
+			users.PUT("/password", userHandlers.ChangePassword)
+			users.PATCH("/password", userHandlers.ChangePassword) // Support both PUT and PATCH
+
+			// Profile photo management
+			users.POST("/profile/photo", userHandlers.UploadProfilePhoto)
+			users.PUT("/profile/photo", userHandlers.UploadProfilePhoto) // Alternative endpoint
+
+			// Account management
+			users.DELETE("/account", userHandlers.DeleteAccount)
+
+			// For other services to get user info
+			users.GET("/:id", userHandlers.GetUserByID)
 		}
 	}
 }

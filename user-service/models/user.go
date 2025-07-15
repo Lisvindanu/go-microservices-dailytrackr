@@ -11,6 +11,8 @@ type User struct {
 	Username     string    `json:"username" db:"username"`
 	Email        string    `json:"email" db:"email"`
 	PasswordHash string    `json:"-" db:"password_hash"` // Hidden from JSON
+	Bio          string    `json:"bio" db:"bio"`
+	ProfilePhoto string    `json:"profile_photo" db:"profile_photo"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
 }
@@ -43,14 +45,19 @@ func (r *UserRepository) Create(user *User) error {
 	}
 
 	user.ID = id
-	return nil
+
+	// Get the created user to populate timestamps
+	return r.GetByIDInto(user.ID, user)
 }
 
 // GetByEmail retrieves a user by email
 func (r *UserRepository) GetByEmail(email string) (*User, error) {
 	user := &User{}
 	query := `
-		SELECT id, username, email, password_hash, created_at, updated_at 
+		SELECT id, username, email, password_hash, 
+		       COALESCE(bio, '') as bio, 
+		       COALESCE(profile_photo, '') as profile_photo,
+		       created_at, updated_at 
 		FROM users 
 		WHERE email = ?
 	`
@@ -60,6 +67,8 @@ func (r *UserRepository) GetByEmail(email string) (*User, error) {
 		&user.Username,
 		&user.Email,
 		&user.PasswordHash,
+		&user.Bio,
+		&user.ProfilePhoto,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -74,8 +83,16 @@ func (r *UserRepository) GetByEmail(email string) (*User, error) {
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(id int64) (*User, error) {
 	user := &User{}
+	return user, r.GetByIDInto(id, user)
+}
+
+// GetByIDInto retrieves a user by ID into existing struct
+func (r *UserRepository) GetByIDInto(id int64, user *User) error {
 	query := `
-		SELECT id, username, email, password_hash, created_at, updated_at 
+		SELECT id, username, email, password_hash, 
+		       COALESCE(bio, '') as bio, 
+		       COALESCE(profile_photo, '') as profile_photo,
+		       created_at, updated_at 
 		FROM users 
 		WHERE id = ?
 	`
@@ -85,22 +102,23 @@ func (r *UserRepository) GetByID(id int64) (*User, error) {
 		&user.Username,
 		&user.Email,
 		&user.PasswordHash,
+		&user.Bio,
+		&user.ProfilePhoto,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return user, nil
+	return err
 }
 
 // GetByUsername retrieves a user by username
 func (r *UserRepository) GetByUsername(username string) (*User, error) {
 	user := &User{}
 	query := `
-		SELECT id, username, email, password_hash, created_at, updated_at 
+		SELECT id, username, email, password_hash, 
+		       COALESCE(bio, '') as bio, 
+		       COALESCE(profile_photo, '') as profile_photo,
+		       created_at, updated_at 
 		FROM users 
 		WHERE username = ?
 	`
@@ -110,6 +128,8 @@ func (r *UserRepository) GetByUsername(username string) (*User, error) {
 		&user.Username,
 		&user.Email,
 		&user.PasswordHash,
+		&user.Bio,
+		&user.ProfilePhoto,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -137,21 +157,98 @@ func (r *UserRepository) UsernameExists(username string) (bool, error) {
 	return count > 0, err
 }
 
-// Update updates user information
+// Update updates user information (username, email, bio)
 func (r *UserRepository) Update(user *User) error {
 	query := `
 		UPDATE users 
-		SET username = ?, email = ?, updated_at = CURRENT_TIMESTAMP 
+		SET username = ?, email = ?, bio = ?, updated_at = CURRENT_TIMESTAMP 
 		WHERE id = ?
 	`
 
-	_, err := r.db.Exec(query, user.Username, user.Email, user.ID)
-	return err
+	result, err := r.db.Exec(query, user.Username, user.Email, user.Bio, user.ID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// UpdatePassword updates user password
+func (r *UserRepository) UpdatePassword(userID int64, passwordHash string) error {
+	query := `
+		UPDATE users 
+		SET password_hash = ?, updated_at = CURRENT_TIMESTAMP 
+		WHERE id = ?
+	`
+
+	result, err := r.db.Exec(query, passwordHash, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+// UpdateProfilePhoto updates user profile photo
+func (r *UserRepository) UpdateProfilePhoto(userID int64, photoURL string) error {
+	query := `
+		UPDATE users 
+		SET profile_photo = ?, updated_at = CURRENT_TIMESTAMP 
+		WHERE id = ?
+	`
+
+	result, err := r.db.Exec(query, photoURL, userID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }
 
 // Delete deletes a user
 func (r *UserRepository) Delete(id int64) error {
 	query := "DELETE FROM users WHERE id = ?"
-	_, err := r.db.Exec(query, id)
-	return err
+
+	result, err := r.db.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }

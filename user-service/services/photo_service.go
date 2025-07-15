@@ -21,15 +21,15 @@ type PhotoService struct {
 	config     *config.Config
 }
 
-// NewPhotoService creates a new photo service instance with graceful degradation
+// NewPhotoService creates a new photo service instance
 func NewPhotoService(cfg *config.Config) *PhotoService {
-	log.Printf("Initializing PhotoService for Activity Service...")
+	log.Printf("Initializing PhotoService for User Service...")
 	log.Printf("Cloudinary Config - Name: '%s', Key: '%s', Secret Set: %v",
 		cfg.CloudinaryCloudName,
 		cfg.CloudinaryAPIKey,
 		cfg.CloudinaryAPISecret != "")
 
-	// ✅ FIXED: Graceful degradation instead of fatal error
+	// Initialize Cloudinary if credentials are available
 	if cfg.CloudinaryCloudName == "" || cfg.CloudinaryAPIKey == "" || cfg.CloudinaryAPISecret == "" {
 		log.Printf("⚠️  Warning: Cloudinary credentials not configured. Photo upload will be disabled.")
 		return &PhotoService{
@@ -51,7 +51,7 @@ func NewPhotoService(cfg *config.Config) *PhotoService {
 		}
 	}
 
-	log.Println("✅ Cloudinary client initialized successfully for Activity Service!")
+	log.Println("✅ Cloudinary client initialized successfully for User Service!")
 
 	return &PhotoService{
 		cloudinary: cld,
@@ -59,7 +59,7 @@ func NewPhotoService(cfg *config.Config) *PhotoService {
 	}
 }
 
-// UploadPhoto uploads a photo to Cloudinary with graceful degradation
+// UploadPhoto uploads a profile photo to Cloudinary
 func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 	// Check if Cloudinary is available
 	if s.cloudinary == nil {
@@ -68,12 +68,12 @@ func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 
 	// Validate file type
 	if !s.isValidImageType(file.Filename) {
-		return "", fmt.Errorf("invalid file type. Allowed types: %s", constants.AllowedImageTypes)
+		return "", fmt.Errorf("invalid file type. Allowed types: %s", constants.AllowedProfileTypes)
 	}
 
-	// Check file size
-	if file.Size > constants.MaxFileSize {
-		return "", fmt.Errorf("file size too large. Maximum size: %d MB", constants.MaxFileSize/(1024*1024))
+	// Check file size (profile photos should be smaller)
+	if file.Size > constants.MaxProfilePhotoSize {
+		return "", fmt.Errorf("file size too large. Maximum size for profile photos: 5 MB")
 	}
 
 	// Open file
@@ -83,22 +83,25 @@ func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 	}
 	defer src.Close()
 
-	// Generate unique filename for Cloudinary
-	filename := s.generateFilename(file.Filename)
+	// Generate unique filename for profile photo
+	filename := s.generateProfileFilename()
 
-	// ✅ FIXED: Add bool pointers for Cloudinary parameters
+	// Upload to Cloudinary with profile-specific settings
+	log.Printf("Uploading profile photo '%s' to Cloudinary...", filename)
+
+	// Create bool pointers for Cloudinary parameters
 	uniqueFilename := true
 	useFilename := false
 
-	// Upload to Cloudinary
-	log.Printf("Uploading '%s' to Cloudinary folder '%s'", filename, constants.UploadPath)
 	uploadResult, err := s.cloudinary.Upload.Upload(
 		context.Background(),
 		src,
 		uploader.UploadParams{
 			PublicID:       filename,
-			Folder:         constants.UploadPath,
+			Folder:         constants.ProfilePhotoPath,
 			ResourceType:   "image",
+			Transformation: "c_fill,w_300,h_300,q_auto,f_auto", // Optimize for profile photos
+			AllowedFormats: []string{"jpg", "png", "webp"},
 			UniqueFilename: &uniqueFilename, // Use pointer to bool
 			UseFilename:    &useFilename,    // Use pointer to bool
 		},
@@ -108,32 +111,32 @@ func (s *PhotoService) UploadPhoto(file *multipart.FileHeader) (string, error) {
 		return "", fmt.Errorf("failed to upload to Cloudinary: %v", err)
 	}
 
-	log.Printf("✅ Activity photo uploaded successfully. Secure URL: %s", uploadResult.SecureURL)
+	log.Printf("✅ Profile photo uploaded successfully. Secure URL: %s", uploadResult.SecureURL)
 	return uploadResult.SecureURL, nil
 }
 
-// isValidImageType checks if the file type is allowed
+// isValidImageType checks if the file type is allowed for profile photos
 func (s *PhotoService) isValidImageType(filename string) bool {
 	ext := strings.ToLower(filepath.Ext(filename))
 	if len(ext) > 0 {
 		ext = ext[1:] // Remove the dot
 	}
 
-	allowedTypes := strings.Split(constants.AllowedImageTypes, ",")
+	// Only allow common image types for profile photos
+	allowedTypes := []string{"jpg", "jpeg", "png", "webp"}
 	for _, allowedType := range allowedTypes {
-		if ext == strings.TrimSpace(allowedType) {
+		if ext == allowedType {
 			return true
 		}
 	}
 	return false
 }
 
-// generateFilename generates a unique filename
-func (s *PhotoService) generateFilename(originalFilename string) string {
+// generateProfileFilename generates a unique filename for profile photos
+func (s *PhotoService) generateProfileFilename() string {
 	timestamp := time.Now().Unix()
 	randomStr := s.generateRandomString(8)
-	// Return filename without extension, Cloudinary will handle it.
-	return fmt.Sprintf("activity_%d_%s", timestamp, randomStr)
+	return fmt.Sprintf("profile_%d_%s", timestamp, randomStr)
 }
 
 // generateRandomString generates a random string of specified length
@@ -145,25 +148,6 @@ func (s *PhotoService) generateRandomString(length int) string {
 		result[i] = charset[seed%int64(len(charset))]
 	}
 	return string(result)
-}
-
-// ValidateFileUpload validates file before upload
-func (s *PhotoService) ValidateFileUpload(file *multipart.FileHeader) error {
-	// Check file size
-	if file.Size > constants.MaxFileSize {
-		return fmt.Errorf("file size too large. Maximum size: %d MB", constants.MaxFileSize/(1024*1024))
-	}
-
-	if file.Size == 0 {
-		return fmt.Errorf("file is empty")
-	}
-
-	// Check file type
-	if !s.isValidImageType(file.Filename) {
-		return fmt.Errorf("invalid file type. Allowed types: %s", constants.AllowedImageTypes)
-	}
-
-	return nil
 }
 
 // DeletePhoto removes a photo from Cloudinary (optional feature)
@@ -197,17 +181,36 @@ func (s *PhotoService) DeletePhoto(publicID string) error {
 		}
 	}
 
-	log.Printf("Deleting activity photo with public ID: %s", publicID)
+	log.Printf("Deleting photo with public ID: %s", publicID)
 
 	_, err := s.cloudinary.Upload.Destroy(context.Background(), uploader.DestroyParams{
 		PublicID: publicID,
 	})
 
 	if err != nil {
-		log.Printf("Failed to delete activity photo: %v", err)
+		log.Printf("Failed to delete photo: %v", err)
 		return fmt.Errorf("failed to delete photo: %v", err)
 	}
 
-	log.Printf("✅ Activity photo deleted successfully: %s", publicID)
+	log.Printf("✅ Photo deleted successfully: %s", publicID)
+	return nil
+}
+
+// ValidateFileUpload validates file before upload
+func (s *PhotoService) ValidateFileUpload(file *multipart.FileHeader) error {
+	// Check file size
+	if file.Size > constants.MaxProfilePhotoSize {
+		return fmt.Errorf("file size too large. Maximum size: %d MB", constants.MaxProfilePhotoSize/(1024*1024))
+	}
+
+	if file.Size == 0 {
+		return fmt.Errorf("file is empty")
+	}
+
+	// Check file type
+	if !s.isValidImageType(file.Filename) {
+		return fmt.Errorf("invalid file type. Allowed types: %s", constants.AllowedProfileTypes)
+	}
+
 	return nil
 }
