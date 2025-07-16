@@ -2,30 +2,30 @@
 
 export const authService = {
   login: async (email, password) => {
-    const response = await apiRequest('/users/auth/login', {
+    const response = await apiRequest('/api/users/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    
+
     if (response.data?.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
-    
+
     return response.data;
   },
 
   register: async (username, email, password) => {
-    const response = await apiRequest('/users/auth/register', {
+    const response = await apiRequest('/api/users/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, email, password }),
     });
-    
+
     if (response.data?.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
     }
-    
+
     return response.data;
   },
 
@@ -40,6 +40,6 @@ export const authService = {
   },
 
   getProfile: async () => {
-    return await apiRequest('/users/api/v1/users/profile');
+    return await apiRequest('/api/users/api/v1/users/profile');
   }
 };
