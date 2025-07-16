@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"time"
 
 	"dailytrackr/habit-service/handlers"
@@ -32,27 +33,29 @@ func main() {
 	e.Use(middleware.Recover())
 
 	// ================================================
-	// FIXED CORS MIDDLEWARE - No AllowCredentials with wildcard
+	// FIXED CORS MIDDLEWARE - Proper configuration
 	// ================================================
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS},
+		AllowMethods:     []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS, echo.PATCH},
 		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 		ExposeHeaders:    []string{echo.HeaderContentLength},
-		AllowCredentials: false,                             // 🔧 FIXED: Set to false when using wildcard
-		MaxAge:           int(12 * time.Hour / time.Second), // 12 hours in seconds
+		AllowCredentials: false,
+		MaxAge:           int(12 * time.Hour / time.Second),
 	}))
 
-	// Additional manual CORS handling untuk edge cases
+	// Additional manual CORS handling for complex preflight requests
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			// Set CORS headers for all requests
 			c.Response().Header().Set("Access-Control-Allow-Origin", "*")
-			c.Response().Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-			c.Response().Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept")
+			c.Response().Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+			c.Response().Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept, X-Requested-With")
 			c.Response().Header().Set("Access-Control-Max-Age", "43200")
 
+			// Handle preflight requests
 			if c.Request().Method == "OPTIONS" {
-				return c.NoContent(204)
+				return c.NoContent(http.StatusNoContent)
 			}
 
 			return next(c)

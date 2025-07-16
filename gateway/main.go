@@ -114,6 +114,7 @@ func main() {
 }
 
 // setupRoutes configures all microservice routes
+// setupRoutes configures all microservice routes
 func setupRoutes(r *gin.Engine, cfg *config.Config) {
 	// User Service routes
 	userProxy := proxy.NewServiceProxy("http://localhost:" + cfg.UserServicePort)
@@ -129,23 +130,20 @@ func setupRoutes(r *gin.Engine, cfg *config.Config) {
 	activityRoutes := r.Group("/api/activities")
 	{
 		activityRoutes.Any("/health", activityProxy.ProxyRequest)
-		// FIXED: Handle both exact path and wildcard path
-		activityRoutes.Any("/api/v1/activities", activityProxy.ProxyRequest)
 		activityRoutes.Any("/api/v1/activities/*path", activityProxy.ProxyRequest)
 	}
 
-	// Habit Service routes
+	// Habit Service routes - FIXED: Better routing
 	habitProxy := proxy.NewServiceProxy("http://localhost:" + cfg.HabitPort)
 	habitRoutes := r.Group("/api/habits")
 	{
 		habitRoutes.Any("/health", habitProxy.ProxyRequest)
-		// FIXED: Handle both exact path and wildcard path
-		habitRoutes.Any("/api/v1/habits", habitProxy.ProxyRequest)
-		habitRoutes.Any("/api/v1/habits/*path", habitProxy.ProxyRequest)
+		habitRoutes.Any("/api/v1/habits", habitProxy.ProxyRequest)       // Handle exact match
+		habitRoutes.Any("/api/v1/habits/*path", habitProxy.ProxyRequest) // Handle with path
 		habitRoutes.Any("/api/v1/habit-logs/*path", habitProxy.ProxyRequest)
 	}
 
-	// Statistics Service routes
+	// Statistics Service routes - FIXED: Proper routing
 	statProxy := proxy.NewServiceProxy("http://localhost:" + cfg.StatPort)
 	statRoutes := r.Group("/api/stats")
 	{
@@ -159,6 +157,14 @@ func setupRoutes(r *gin.Engine, cfg *config.Config) {
 	{
 		aiRoutes.Any("/health", aiProxy.ProxyRequest)
 		aiRoutes.Any("/api/v1/ai/*path", aiProxy.ProxyRequest)
+	}
+
+	// Notification Service routes (for future implementation)
+	notificationProxy := proxy.NewServiceProxy("http://localhost:" + cfg.NotificationPort)
+	notificationRoutes := r.Group("/api/notifications")
+	{
+		notificationRoutes.Any("/health", notificationProxy.ProxyRequest)
+		notificationRoutes.Any("/api/v1/notifications/*path", notificationProxy.ProxyRequest)
 	}
 }
 
