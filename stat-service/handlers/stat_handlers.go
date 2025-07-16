@@ -36,6 +36,7 @@ func (h *StatHandlers) GetDashboard(c *gin.Context) {
 
 	dashboard, err := h.statRepo.GetDashboardStats(userID.(int64))
 	if err != nil {
+		// FIXED: Log the actual error for debugging
 		utils.SendInternalServerErrorResponse(c.Writer, "Failed to get dashboard statistics", err)
 		return
 	}
@@ -123,9 +124,6 @@ func (h *StatHandlers) GetHabitProgress(c *gin.Context) {
 }
 
 // GetActivityChart handles getting activity chart data
-// file: stat_handlers.go
-
-// GetActivityChart handles getting activity chart data
 func (h *StatHandlers) GetActivityChart(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -133,36 +131,19 @@ func (h *StatHandlers) GetActivityChart(c *gin.Context) {
 		return
 	}
 
-	// =================================================================
-	// PERBAIKAN DI SINI
-	// =================================================================
-
-	// 1. Ambil parameter 'type', jika tidak ada, set default ke "daily"
+	// Get parameters with defaults
 	chartType := c.Query("type")
 	if chartType == "" {
 		chartType = "daily"
 	}
 
-	// 2. Ambil parameter 'period'
 	periodStr := c.Query("period")
-	var period int
-	var err error
-
-	if periodStr == "" {
-		// 3. Jika tidak ada, set default ke 7
-		period = 7
-	} else {
-		// 4. Jika ada, konversi ke integer
-		period, err = strconv.Atoi(periodStr)
-		if err != nil || period <= 0 {
-			// Jika konversi gagal atau nilainya tidak valid, set default ke 7
-			period = 7
+	period := 7 // default
+	if periodStr != "" {
+		if parsedPeriod, err := strconv.Atoi(periodStr); err == nil && parsedPeriod > 0 {
+			period = parsedPeriod
 		}
 	}
-
-	// =================================================================
-	// AKHIR PERBAIKAN
-	// =================================================================
 
 	chartData, err := h.statRepo.GetActivityChartData(userID.(int64), chartType, period)
 	if err != nil {

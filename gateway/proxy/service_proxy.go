@@ -34,7 +34,7 @@ func NewServiceProxy(targetURL string) *ServiceProxy {
 	}
 }
 
-// ProxyRequest forwards the request to the target service with enhanced error handling
+// ProxyRequest forwards the request to the target service
 func (sp *ServiceProxy) ProxyRequest(c *gin.Context) {
 	// Parse target URL
 	target, err := url.Parse(sp.targetURL)
@@ -141,21 +141,20 @@ func (sp *ServiceProxy) ProxyRequest(c *gin.Context) {
 func (sp *ServiceProxy) buildTargetPath(originalPath string) string {
 	targetPath := originalPath
 
-	// Remove gateway prefixes for routing
-	prefixes := []string{
-		"/api/users",
-		"/api/activities",
-		"/api/habits",
-		"/api/stats",
-		"/api/ai",
-		"/api/notifications",
-	}
-
-	for _, prefix := range prefixes {
-		if strings.HasPrefix(targetPath, prefix) {
-			targetPath = strings.TrimPrefix(targetPath, prefix)
-			break
-		}
+	// FIXED: Better path mapping logic
+	switch {
+	case strings.HasPrefix(targetPath, "/api/users/"):
+		targetPath = strings.TrimPrefix(targetPath, "/api/users")
+	case strings.HasPrefix(targetPath, "/api/activities/"):
+		targetPath = strings.TrimPrefix(targetPath, "/api/activities")
+	case strings.HasPrefix(targetPath, "/api/habits/"):
+		targetPath = strings.TrimPrefix(targetPath, "/api/habits")
+	case strings.HasPrefix(targetPath, "/api/stats/"):
+		targetPath = strings.TrimPrefix(targetPath, "/api/stats")
+	case strings.HasPrefix(targetPath, "/api/ai/"):
+		targetPath = strings.TrimPrefix(targetPath, "/api/ai")
+	case strings.HasPrefix(targetPath, "/api/notifications/"):
+		targetPath = strings.TrimPrefix(targetPath, "/api/notifications")
 	}
 
 	// Default to health check if path is empty
