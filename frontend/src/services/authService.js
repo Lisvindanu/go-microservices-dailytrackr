@@ -2,7 +2,8 @@
 
 export const authService = {
   login: async (email, password) => {
-    const response = await apiRequest('/api/users/auth/login', {
+    // FIXED: Use correct auth endpoint that maps to gateway
+    const response = await apiRequest('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -16,7 +17,8 @@ export const authService = {
   },
 
   register: async (username, email, password) => {
-    const response = await apiRequest('/api/users/auth/register', {
+    // FIXED: Use correct auth endpoint that maps to gateway
+    const response = await apiRequest('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, email, password }),
     });
@@ -40,6 +42,7 @@ export const authService = {
   },
 
   getProfile: async () => {
-    return await apiRequest('/api/users/api/v1/users/profile');
+    // FIXED: Use correct user profile endpoint
+    return await apiRequest('/api/v1/users/profile');
   }
 };

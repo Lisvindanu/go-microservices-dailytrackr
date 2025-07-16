@@ -3,14 +3,31 @@
 export const aiService = {
   getDailySummary: async (date = null) => {
     const params = date ? `?date=${date}` : '';
-    return await apiRequest(`/api/ai/api/v1/ai/daily-summary${params}`);
+    // FIXED: Remove duplicate /api - use apiRequest with /api/v1/ai
+    return await apiRequest(`/api/v1/ai/daily-summary${params}`, {
+      method: 'POST'
+    });
   },
 
   getHabitRecommendation: async (days = 7) => {
-    return await apiRequest(`/api/ai/api/v1/ai/habit-recommendation?days=${days}`);
+    // FIXED: Remove duplicate /api
+    return await apiRequest('/api/v1/ai/habit-recommendation', {
+      method: 'POST'
+    });
   },
 
   getInsights: async () => {
-    return await apiRequest('/api/ai/api/v1/ai/insights');
+    // FIXED: Remove duplicate /api
+    return await apiRequest('/api/v1/ai/insights');
+  },
+
+  analyzeActivities: async (days = 7) => {
+    // FIXED: Remove duplicate /api
+    return await apiRequest(`/api/v1/ai/analyze-activities?days=${days}`);
+  },
+
+  getProductivityTips: async () => {
+    // FIXED: Remove duplicate /api
+    return await apiRequest('/api/v1/ai/productivity-tips');
   }
 };

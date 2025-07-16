@@ -2,11 +2,9 @@ package proxy
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -19,63 +17,38 @@ type ServiceProxy struct {
 	client    *http.Client
 }
 
-// NewServiceProxy creates a new service proxy with optimized settings
+// NewServiceProxy creates a new service proxy instance
 func NewServiceProxy(targetURL string) *ServiceProxy {
 	return &ServiceProxy{
 		targetURL: targetURL,
 		client: &http.Client{
 			Timeout: 30 * time.Second,
-			Transport: &http.Transport{
-				MaxIdleConns:        100,
-				MaxIdleConnsPerHost: 10,
-				IdleConnTimeout:     30 * time.Second,
-			},
 		},
 	}
 }
 
-// ProxyRequest forwards the request to the target service
+// ProxyRequest forwards the request to the target microservice
 func (sp *ServiceProxy) ProxyRequest(c *gin.Context) {
-	// Parse target URL
-	target, err := url.Parse(sp.targetURL)
-	if err != nil {
-		log.Printf("❌ Failed to parse target URL %s: %v", sp.targetURL, err)
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Gateway configuration error",
-			"error":   "Invalid target URL",
-		})
-		return
+	// Build target URL with proper path mapping
+	targetPath := sp.buildTargetPathEnhanced(c.Request.URL.Path)
+	targetURL := sp.targetURL + targetPath
+
+	// Preserve query parameters
+	if c.Request.URL.RawQuery != "" {
+		targetURL += "?" + c.Request.URL.RawQuery
 	}
+
+	log.Printf("🔄 Proxying: %s %s -> %s", c.Request.Method, c.Request.URL.Path, targetURL)
 
 	// Read request body
-	reqBody, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		log.Printf("❌ Failed to read request body: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{
-			"success": false,
-			"message": "Invalid request body",
-			"error":   err.Error(),
-		})
-		return
+	var bodyBytes []byte
+	if c.Request.Body != nil {
+		bodyBytes, _ = io.ReadAll(c.Request.Body)
+		c.Request.Body.Close()
 	}
 
-	// Build target URL with path
-	targetPath := sp.buildTargetPath(c.Request.URL.Path)
-	fullURL := target.Scheme + "://" + target.Host + targetPath
-
-	// Add query parameters
-	if c.Request.URL.RawQuery != "" {
-		fullURL += "?" + c.Request.URL.RawQuery
-	}
-
-	log.Printf("🔄 Proxying %s %s -> %s", c.Request.Method, c.Request.URL.Path, fullURL)
-
-	// Create HTTP request with context for timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, c.Request.Method, fullURL, bytes.NewReader(reqBody))
+	// Create new request
+	req, err := http.NewRequest(c.Request.Method, targetURL, bytes.NewReader(bodyBytes))
 	if err != nil {
 		log.Printf("❌ Failed to create request: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -86,30 +59,24 @@ func (sp *ServiceProxy) ProxyRequest(c *gin.Context) {
 		return
 	}
 
-	// Copy headers with filtering
+	// Copy headers (excluding connection-specific headers)
 	sp.copyHeaders(c.Request.Header, req.Header)
 
-	// Make request to target service
+	// Add necessary headers
+	req.Header.Set("X-Forwarded-For", c.ClientIP())
+	req.Header.Set("X-Forwarded-Proto", "http")
+	req.Header.Set("X-Real-IP", c.ClientIP())
+
+	// Execute request
 	resp, err := sp.client.Do(req)
 	if err != nil {
-		log.Printf("❌ Failed to proxy request to %s: %v", fullURL, err)
-
-		// Enhanced error response based on error type
-		if ctx.Err() == context.DeadlineExceeded {
-			c.JSON(http.StatusGatewayTimeout, gin.H{
-				"success": false,
-				"message": "Service timeout",
-				"service": sp.targetURL,
-				"error":   "Request timed out",
-			})
-		} else {
-			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"success": false,
-				"message": "Service temporarily unavailable",
-				"service": sp.targetURL,
-				"error":   err.Error(),
-			})
-		}
+		log.Printf("❌ Proxy request failed: %v", err)
+		c.JSON(http.StatusBadGateway, gin.H{
+			"success": false,
+			"message": "Service temporarily unavailable",
+			"error":   "Failed to connect to backend service",
+			"service": sp.targetURL,
+		})
 		return
 	}
 	defer resp.Body.Close()
@@ -137,24 +104,68 @@ func (sp *ServiceProxy) ProxyRequest(c *gin.Context) {
 		c.Request.Method, c.Request.URL.Path, resp.StatusCode, len(respBody))
 }
 
-// buildTargetPath builds the target path by removing gateway prefixes
-func (sp *ServiceProxy) buildTargetPath(originalPath string) string {
+// buildTargetPathEnhanced builds the target path with enhanced mapping logic
+func (sp *ServiceProxy) buildTargetPathEnhanced(originalPath string) string {
 	targetPath := originalPath
 
-	// FIXED: Better path mapping logic
+	// ENHANCED: More precise path mapping based on gateway structure
 	switch {
+	// User service paths
+	case strings.HasPrefix(targetPath, "/api/users/auth/"):
+		// /api/users/auth/login -> /auth/login
+		targetPath = strings.Replace(targetPath, "/api/users", "", 1)
+	case strings.HasPrefix(targetPath, "/api/users/api/v1/users"):
+		// /api/users/api/v1/users/profile -> /api/v1/users/profile
+		targetPath = strings.Replace(targetPath, "/api/users", "", 1)
 	case strings.HasPrefix(targetPath, "/api/users/"):
-		targetPath = strings.TrimPrefix(targetPath, "/api/users")
+		// /api/users/health -> /health
+		targetPath = strings.Replace(targetPath, "/api/users", "", 1)
+	case strings.HasPrefix(targetPath, "/auth/"):
+		// Direct auth routes stay as is
+		// /auth/login -> /auth/login
+
+	// Activity service paths
+	case strings.HasPrefix(targetPath, "/api/activities/api/v1/activities"):
+		// /api/activities/api/v1/activities -> /api/v1/activities
+		targetPath = strings.Replace(targetPath, "/api/activities", "", 1)
 	case strings.HasPrefix(targetPath, "/api/activities/"):
-		targetPath = strings.TrimPrefix(targetPath, "/api/activities")
+		// /api/activities/health -> /health
+		targetPath = strings.Replace(targetPath, "/api/activities", "", 1)
+
+	// Habit service paths
+	case strings.HasPrefix(targetPath, "/api/habits/api/v1/habits"):
+		// /api/habits/api/v1/habits -> /api/v1/habits
+		targetPath = strings.Replace(targetPath, "/api/habits", "", 1)
+	case strings.HasPrefix(targetPath, "/api/habits/api/v1/habit-logs"):
+		// /api/habits/api/v1/habit-logs -> /api/v1/habit-logs
+		targetPath = strings.Replace(targetPath, "/api/habits", "", 1)
 	case strings.HasPrefix(targetPath, "/api/habits/"):
-		targetPath = strings.TrimPrefix(targetPath, "/api/habits")
+		// /api/habits/health -> /health
+		targetPath = strings.Replace(targetPath, "/api/habits", "", 1)
+
+	// Statistics service paths
+	case strings.HasPrefix(targetPath, "/api/stats/api/v1/stats"):
+		// /api/stats/api/v1/stats -> /api/v1/stats
+		targetPath = strings.Replace(targetPath, "/api/stats", "", 1)
 	case strings.HasPrefix(targetPath, "/api/stats/"):
-		targetPath = strings.TrimPrefix(targetPath, "/api/stats")
+		// /api/stats/health -> /health
+		targetPath = strings.Replace(targetPath, "/api/stats", "", 1)
+
+	// AI service paths
+	case strings.HasPrefix(targetPath, "/api/ai/api/v1/ai"):
+		// /api/ai/api/v1/ai -> /api/v1/ai
+		targetPath = strings.Replace(targetPath, "/api/ai", "", 1)
 	case strings.HasPrefix(targetPath, "/api/ai/"):
-		targetPath = strings.TrimPrefix(targetPath, "/api/ai")
+		// /api/ai/health -> /health
+		targetPath = strings.Replace(targetPath, "/api/ai", "", 1)
+
+	// Notification service paths
+	case strings.HasPrefix(targetPath, "/api/notifications/api/v1/notifications"):
+		// /api/notifications/api/v1/notifications -> /api/v1/notifications
+		targetPath = strings.Replace(targetPath, "/api/notifications", "", 1)
 	case strings.HasPrefix(targetPath, "/api/notifications/"):
-		targetPath = strings.TrimPrefix(targetPath, "/api/notifications")
+		// /api/notifications/health -> /health
+		targetPath = strings.Replace(targetPath, "/api/notifications", "", 1)
 	}
 
 	// Default to health check if path is empty
@@ -177,10 +188,12 @@ func (sp *ServiceProxy) copyHeaders(src http.Header, dst http.Header) {
 		"Trailer":             true,
 		"Transfer-Encoding":   true,
 		"Upgrade":             true,
+		"Host":                true, // Let Go set the host
 	}
 
 	for key, values := range src {
-		if !skipHeaders[key] {
+		normalizedKey := http.CanonicalHeaderKey(key)
+		if !skipHeaders[normalizedKey] {
 			for _, value := range values {
 				dst.Add(key, value)
 			}
@@ -195,13 +208,20 @@ func (sp *ServiceProxy) copyResponseHeaders(src http.Header, dst http.Header) {
 		"Connection":        true,
 		"Transfer-Encoding": true,
 		"Upgrade":           true,
+		"Server":            true, // Let Gin set the server header
 	}
 
 	for key, values := range src {
-		if !skipHeaders[key] {
+		normalizedKey := http.CanonicalHeaderKey(key)
+		if !skipHeaders[normalizedKey] {
 			for _, value := range values {
 				dst.Add(key, value)
 			}
 		}
 	}
+
+	// Ensure CORS headers are preserved
+	dst.Set("Access-Control-Allow-Origin", "*")
+	dst.Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	dst.Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, Accept")
 }
